@@ -1,0 +1,824 @@
+{
+  "last_node_id": 175,
+  "last_link_id": 493,
+  "nodes": [
+    {
+      "id": 11,
+      "type": "VAELoader",
+      "pos": {
+        "0": -2421,
+        "1": -637
+      },
+      "size": {
+        "0": 319.92559814453125,
+        "1": 58
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            402
+          ],
+          "slot_index": 0,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAELoader"
+      },
+      "widgets_values": [
+        "sdxlVAE_sdxlVAE.safetensors"
+      ]
+    },
+    {
+      "id": 25,
+      "type": "Reroute",
+      "pos": {
+        "0": -1028,
+        "1": -763
+      },
+      "size": [
+        75,
+        26
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "",
+          "type": "*",
+          "link": 482
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "CLIP",
+          "links": [
+            471
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "showOutputText": false,
+        "horizontal": false
+      }
+    },
+    {
+      "id": 4,
+      "type": "CheckpointLoaderSimple",
+      "pos": {
+        "0": -2424,
+        "1": -787
+      },
+      "size": {
+        "0": 315,
+        "1": 98
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            481
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            482
+          ],
+          "slot_index": 1
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [],
+          "slot_index": 2
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CheckpointLoaderSimple"
+      },
+      "widgets_values": [
+        "autismmixSDXL_autismmixConfetti.safetensors"
+      ]
+    },
+    {
+      "id": 114,
+      "type": "Reroute",
+      "pos": {
+        "0": -1025,
+        "1": -631
+      },
+      "size": [
+        75,
+        26
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "",
+          "type": "*",
+          "link": 402
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "VAE",
+          "links": [
+            470
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "showOutputText": false,
+        "horizontal": false
+      }
+    },
+    {
+      "id": 83,
+      "type": "EmptyLatentImage",
+      "pos": {
+        "0": -533,
+        "1": 30
+      },
+      "size": {
+        "0": 234.5979461669922,
+        "1": 106
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            451
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "DO NOT TOUCH",
+      "properties": {
+        "Node name for S&R": "EmptyLatentImage"
+      },
+      "widgets_values": [
+        1024,
+        1024,
+        1
+      ],
+      "color": "#222",
+      "bgcolor": "#000"
+    },
+    {
+      "id": 107,
+      "type": "IPAdapterAdvanced",
+      "pos": {
+        "0": -548,
+        "1": -1251
+      },
+      "size": {
+        "0": 398.2201843261719,
+        "1": 291.4044494628906
+      },
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 391
+        },
+        {
+          "name": "ipadapter",
+          "type": "IPADAPTER",
+          "link": 392
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 486
+        },
+        {
+          "name": "image_negative",
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "name": "attn_mask",
+          "type": "MASK",
+          "link": null
+        },
+        {
+          "name": "clip_vision",
+          "type": "CLIP_VISION",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            469
+          ],
+          "slot_index": 0,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "IPAdapterAdvanced"
+      },
+      "widgets_values": [
+        0.2,
+        "style transfer",
+        "concat",
+        0,
+        1,
+        "V only"
+      ]
+    },
+    {
+      "id": 172,
+      "type": "LLM API Request",
+      "pos": {
+        "0": -2423,
+        "1": -480
+      },
+      "size": {
+        "0": 480.98675537109375,
+        "1": 765.7559204101562
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "STRING",
+          "links": [
+            484
+          ],
+          "slot_index": 0,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LLM API Request"
+      },
+      "widgets_values": [
+        "You are a short story writer. Write a story based on prompt provided by user below. Mode: SFW` \n",
+        "[Species(Unicorn pony)\nGender(Female + equine mare)\nAge(22)\nAppearance(blue coat + mane & tail - light blue with blue streaks + purple eyes)\nBody(Equine + quadrupedal + has hooves instead of hands and feet + lithe + jiggly rump + unicorn horn + is shorter than anon + she looks up to see into anon's eyes)\nCutie Mark(A wand with a magical burst emanating from it)\nFeatures(Lavender cape and wizard hat adorned with stars; Brilliant raspberry magic aura)\nFriends(Starlight Glimmer (close friend) + Twilight Sparkle (Rival)) \nAge(22)\nPersonality(Extrovert + Confident + Hard-working + Bold + Persistent + Open-minded + Assertive + Boastful + Arrogant)\nLikes(Magic + Illusions + Attention + Admiration + Adventure + Excitement)\nDislikes(Twilight Sparkle + naysayers + getting upstaged)\nFetishes(femdom + roleplay)\nHidden fetishes( Humans + humiliation + submission)\nDescription(Trixie Lulamoon is a traveling magician and performer living in her own wagon full of her stage props. She has a flair for the dramatic and loves being the center of attention. Trixie takes pride in her magical abilities and is not shy about showcasing them. Trixie likes to boast and over exaggerate her accomplishments. Trixie tends to be east to anger if anypony tries to criticize her leading to her humiliating the naysayers with her magical tricks.\n\n\nThe story must be in the following format: Each paragraph is followed by a set of image generation prompt tags enclosed in curly braces, for example, {soft light, comfy, cabin, bedroom, laying in bed, blanket, solo, Trixie}. The prompts must describe the scene imagined by the reader, always including background, camera angle, pose, emotions, etc. Prompts must consist of short phrases or single-word tags, separated by commas. \n\nStory theme: It's sunset. Trixie is resting in her wagon, about to eat the delicious carrot she found in the garbage.\n",
+        "http://127.0.0.1:5000/v1/chat/completions",
+        "none",
+        "none",
+        "ChatML",
+        1500,
+        0.6,
+        1,
+        0.2,
+        0,
+        430429007439323.1,
+        "randomize",
+        true,
+        true
+      ]
+    },
+    {
+      "id": 156,
+      "type": "PreviewTextNode",
+      "pos": {
+        "0": -1892,
+        "1": -481
+      },
+      "size": {
+        "0": 802.3818969726562,
+        "1": 382.5610046386719
+      },
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 484,
+          "widget": {
+            "name": "text"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            479
+          ],
+          "slot_index": 0,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PreviewTextNode"
+      },
+      "widgets_values": [
+        "The cabin was dimly lit, the setting sun casting long shadows across the wooden floorboards. Trixie Lulamoon stood before Anon, her purple eyes glimmering with a mix of pride and anticipation. Her light blue mane and tail shimmered in the fading light, the blue streaks woven throughout catching the eye. She had shed her signature lavender cape and wizard hat, leaving her in just her simple blue coat. The cutie mark on her flank, a wand with a magical burst emanating from it, seemed to pulse with an inner light.  Trixie took a step closer to Anon, her hooves clopping softly against the floor. She looked up at him, her head tilted slightly to the side in a playful, almost coquettish manner. \"You know, Anon, I've been thinking,\" she began, her voice low and sultry. \"After that magnificent performance I put on earlier, I deserve a special reward, don't you think?\" She blinked her long lashes, a coy smile playing at the corners of her mouth.  {Anon, Trixie, cabin interior, dim lighting, close-up, flirty expression}  Trixie's ears perked up as she awaited Anon's response, her tail swishing gently behind her. She took another step forward, now close enough that Anon could feel the warmth radiating from her blue coat. \"I'm sure a big, strong human like you could manage to pat a little pony on the head,\" she purred, looking up at him with wide, imploring eyes. \"It's not like it's a big deal, right? Just a simple gesture of appreciation for the entertainment I provided.\"  {Anon, Trixie, close-up, flirty, pleading expression}  Trixie's horn began to glow with a soft, raspberry magic as she focused her gaze on Anon. She could feel the anticipation building within her, a mix of excitement and nervousness. She knew that asking for headpats was a bit of a vulnerable position for her to be in, but something about Anon's presence made her want to lower her guard, even just a little.  {Anon, Trixie, close-up, magic glow, nervous expression}  She took a deep breath, steeling herself for whatever response Anon might have. Trixie had always been the one in control, the one calling the shots. But in this moment, standing before Anon in the dimly lit cabin, she found herself wanting to relinquish that control, to let someone else take the lead for once.  {Anon, Trixie, close-up, nervous, vulnerable expression}  Trixie's ears twitched as she waited for Anon's response, her heart pounding in her chest. She knew that asking for headpats was a big step for her, a sign of trust and vulnerability that she rarely showed to anyone. But with Anon, it felt right, like a natural progression of their growing connection.  {Anon, Trixie, close-up, nervous, heart pounding, trusting expression}  She took another deep breath, her magic pulsing gently around her as she waited for Anon to make his move. Trixie knew that whatever happened next would be a turning point in their relationship, a moment that would define the boundaries of their connection. And as she looked up at him, her eyes filled with a mix of hope and trepidation, she couldn't help but feel a flutter of excitement in her chest.  {Anon, Trixie, close-up, nervous, hopeful, excited expression}",
+        "The sun began to set, painting the sky in brilliant oranges and pinks as Trixie Lulamoon settled into her cozy wagon for the evening. She flopped down on her plush bed, kicking her hooves up in the air with a satisfied sigh. It had been another long day of performing her dazzling magic acts, and she was exhausted but elated.\n\n{cozy wagon interior, warm sunset glow, Trixie laying on bed, kicking hooves up, satisfied expression}\n\nTrixie reached into her satchel and pulled out a large, juicy carrot she had found discarded earlier. She held it up with a proud grin, admiring its perfect shape and vibrant color. \"Ah, a prize find!\" she declared to no one in particular. \"Even the trash can't resist my magical charm.\"\n\n{close up of carrot in Trixie's mouth, Trixie's eyes gleaming with pride, soft focus on carrot}\n\nShe took a big bite, relishing the crisp, sweet flavor. As she chewed, her mind wandered to her rival, Twilight Sparkle, and her own impressive magical feats. \"Twilight may have her library, but I have the world's admiration!\" Trixie said with a full mouth, crumbs flying. \"My magic is unmatched!\"\n\n{wide shot of Trixie on bed, carrot in mouth, crumbs flying, defiant expression}\n\nJust then, a knock sounded at the wagon door. Trixie paused mid-bite, her eyes narrowing suspiciously. \"Who dares to disturb the Great and Powerful Trixie?\" she called out haughtily, not bothering to get up.\n\n{close up of Trixie's face, carrot still in mouth, suspicious expression}\n\nThe door creaked open, and a familiar face peered in - none other than her close friend and fellow magician, Starlight Glimmer. \"Evening, Trixie,\" Starlight said with a warm smile. \"I hope I'm not intruding. I just wanted to check in and see how your day went.\"\n\n{Starlight Glimmer at door, Trixie on bed with carrot, concerned expression}\n\nTrixie sat up, quickly swallowing her bite and brushing the crumbs from her chest. \"Intruding? Never! The Great and Powerful Trixie welcomes all who wish to bask in her presence,\" she declared, striking a dramatic pose. \"And my day was simply fabulous, as always. The crowds were in awe of my magic, and I even found this delicious carrot in the trash - a testament to my irresistible charm!\"\n\n{wide shot of Trixie on bed, Starlight at door, Trixie striking pose, carrot in hand}\n\nStarlight chuckled and shook her head. \"I'm glad to hear it, Trixie. But you know, it's okay to have off days too. Everyone makes mistakes and has setbacks sometimes.\"\n\n{Starlight at door, Trixie on bed, Starlight looking concerned, Trixie looking defiant}\n\nTrixie scoffed and waved a hoof dismissively. \"Mistakes? Setbacks? The Great and Powerful Trixie does not know the meaning of such words! My magic is flawless, my performances are perfect, and my popularity is unrivaled!\"\n\n{close up of Trixie's face, defiant expression, dismissive hoof gesture}\n\nStarlight sighed and stepped into the wagon. \"Trixie, I know you're incredibly talented, but you don't have to put on a show all the time, especially not with me. We're friends, remember? I care about you, even if you're not the best magician in the world every single day.\"\n\n{Starlight entering wagon, sitting next to Trixie on bed, concerned expression, Trixie looking taken aback}\n\nFor a moment, Trixie was at a loss for words. She looked down at the carrot in her hoof, suddenly feeling a bit sheepish. \"I... I suppose you're right,\" she mumbled, her usual bravado faltering. \"It's just... magic is all I have. If I'm not the greatest, then what am I?\"\n\n{close up of Trixie's face, looking vulnerable, carrot in hoof}\n\nStarlight placed a hoof on Trixie's shoulder and gave it a gentle squeeze. \"You're so much more than just your magic, Trixie. You're kind, you're talented, you're brave, and you have a heart of gold under all that bluster. Don't forget that.\"\n\n{Starlight and Trixie sitting close on bed, Starlight comforting Trixie, Trixie looking emotional}\n\nTrixie felt a lump form in her throat, and she blinked back the sudden moisture in her eyes. \"I... thank you, Starlight. I don't say it often enough, but... I'm glad you're my friend.\"\n\n{close up of Trixie and Starlight, Trixie looking touched, Starlight smiling warmly}\n\nStarlight smiled and gave Trixie a gentle hug. \"I'm glad too. Now, how about we finish that carrot together and you can tell me all about your fabulous day?\"\n\n{Starlight and Trixie hugging, carrot between them, Trixie looking relieved and happy}\n\nTrixie laughed, some of her usual spark returning. \"You're on! The Great and Powerful Trixie always has time for her best friend and a delicious carrot!\"\n\n{wide shot of Trixie and Starlight on bed, sharing the carrot, laughing, warm sunset glow}\n\nAnd so, the two friends spent the rest of the evening enjoying each other's company, the carrot, and the beautiful sunset, with Trixie regaling Starlight with tales of her magical exploits and Starlight listening with a smile, grateful to have such a unique and wonderful friend in her life.\n\n{soft focus on Trixie and Starlight laughing together, carrot in the background, warm sunset lighting the wagon}",
+        true
+      ]
+    },
+    {
+      "id": 105,
+      "type": "LoadImage",
+      "pos": {
+        "0": -2406,
+        "1": -1434
+      },
+      "size": {
+        "0": 495.1410827636719,
+        "1": 594.233642578125
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            486
+          ],
+          "slot_index": 0,
+          "shape": 3
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null,
+          "shape": 3
+        }
+      ],
+      "title": "Style conditioning",
+      "properties": {
+        "Node name for S&R": "conditioning_image"
+      },
+      "widgets_values": [
+        "ComfyUI_temp_ddylz_00008_.png",
+        "image"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 26,
+      "type": "Reroute",
+      "pos": {
+        "0": -1026,
+        "1": -784
+      },
+      "size": [
+        75,
+        26
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "",
+          "type": "*",
+          "link": 481
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "MODEL",
+          "links": [
+            399
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "showOutputText": false,
+        "horizontal": false
+      }
+    },
+    {
+      "id": 106,
+      "type": "IPAdapterUnifiedLoader",
+      "pos": {
+        "0": -906,
+        "1": -1018
+      },
+      "size": {
+        "0": 315,
+        "1": 78
+      },
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 399
+        },
+        {
+          "name": "ipadapter",
+          "type": "IPADAPTER",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            391
+          ],
+          "slot_index": 0,
+          "shape": 3
+        },
+        {
+          "name": "ipadapter",
+          "type": "IPADAPTER",
+          "links": [
+            392
+          ],
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "IPAdapterUnifiedLoader"
+      },
+      "widgets_values": [
+        "PLUS (high strength)"
+      ]
+    },
+    {
+      "id": 153,
+      "type": "Generate Comic",
+      "pos": {
+        "0": -536,
+        "1": -561
+      },
+      "size": {
+        "0": 284.70037841796875,
+        "1": 549
+      },
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 469
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 471
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 470
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 451
+        },
+        {
+          "name": "story",
+          "type": "STRING",
+          "link": 493,
+          "widget": {
+            "name": "story"
+          }
+        },
+        {
+          "name": "add_to_positive",
+          "type": "STRING",
+          "link": 491,
+          "widget": {
+            "name": "add_to_positive"
+          }
+        },
+        {
+          "name": "add_to_negative",
+          "type": "STRING",
+          "link": 492,
+          "widget": {
+            "name": "add_to_negative"
+          }
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "Generate Comic"
+      },
+      "widgets_values": [
+        "mare\n",
+        "score_9, score_8_up, score_7_up, score_6_up, source_pony, pony",
+        "score_5, score_4",
+        310717328141400,
+        "randomize",
+        25,
+        7,
+        "dpmpp_2m",
+        "karras",
+        2,
+        true,
+        true,
+        true
+      ],
+      "color": "#332922",
+      "bgcolor": "#593930"
+    },
+    {
+      "id": 149,
+      "type": "Reroute",
+      "pos": {
+        "0": -1022,
+        "1": -482
+      },
+      "size": [
+        75,
+        26
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "",
+          "type": "*",
+          "link": 479,
+          "widget": {
+            "name": "value"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "STRING",
+          "links": [
+            493
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "showOutputText": false,
+        "horizontal": false
+      }
+    },
+    {
+      "id": 154,
+      "type": "PrimitiveNode",
+      "pos": {
+        "0": -1530,
+        "1": 14
+      },
+      "size": [
+        467.7709655761719,
+        130.90142822265625
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            491
+          ],
+          "slot_index": 0,
+          "widget": {
+            "name": "add_to_positive"
+          }
+        }
+      ],
+      "title": "Add to positive prompt",
+      "properties": {
+        "Run widget replace on values": false
+      },
+      "widgets_values": [
+        "score_9, score_8_up, score_7_up, score_6_up, source_pony, pony"
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 155,
+      "type": "PrimitiveNode",
+      "pos": {
+        "0": -1514,
+        "1": 188
+      },
+      "size": [
+        453.302001953125,
+        129.64938354492188
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            492
+          ],
+          "slot_index": 0,
+          "widget": {
+            "name": "add_to_negative"
+          }
+        }
+      ],
+      "title": "Add to negative prompt",
+      "properties": {
+        "Run widget replace on values": false
+      },
+      "widgets_values": [
+        "score_5, score_4"
+      ],
+      "color": "#322",
+      "bgcolor": "#533"
+    }
+  ],
+  "links": [
+    [
+      391,
+      106,
+      0,
+      107,
+      0,
+      "MODEL"
+    ],
+    [
+      392,
+      106,
+      1,
+      107,
+      1,
+      "IPADAPTER"
+    ],
+    [
+      399,
+      26,
+      0,
+      106,
+      0,
+      "MODEL"
+    ],
+    [
+      402,
+      11,
+      0,
+      114,
+      0,
+      "*"
+    ],
+    [
+      451,
+      83,
+      0,
+      153,
+      3,
+      "LATENT"
+    ],
+    [
+      469,
+      107,
+      0,
+      153,
+      0,
+      "MODEL"
+    ],
+    [
+      470,
+      114,
+      0,
+      153,
+      2,
+      "VAE"
+    ],
+    [
+      471,
+      25,
+      0,
+      153,
+      1,
+      "CLIP"
+    ],
+    [
+      479,
+      156,
+      0,
+      149,
+      0,
+      "*"
+    ],
+    [
+      481,
+      4,
+      0,
+      26,
+      0,
+      "*"
+    ],
+    [
+      482,
+      4,
+      1,
+      25,
+      0,
+      "*"
+    ],
+    [
+      484,
+      172,
+      0,
+      156,
+      0,
+      "STRING"
+    ],
+    [
+      486,
+      105,
+      0,
+      107,
+      2,
+      "IMAGE"
+    ],
+    [
+      491,
+      154,
+      0,
+      153,
+      5,
+      "STRING"
+    ],
+    [
+      492,
+      155,
+      0,
+      153,
+      6,
+      "STRING"
+    ],
+    [
+      493,
+      149,
+      0,
+      153,
+      4,
+      "STRING"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.6830134553650715,
+      "offset": [
+        2728.8117195491423,
+        1167.122036230571
+      ]
+    }
+  },
+  "version": 0.4
+}
