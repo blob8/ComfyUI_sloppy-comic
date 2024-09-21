@@ -1,0 +1,15 @@
+[project]
+name = "comfyui_sloppy-comic"
+description = "Using IPAdapter for style consistency, the node accepts a story structured as text {prompt} text {prompt} etc. and generates a comic, saving it to /output. It also adds LLM API Request node, providing an openai compatible LLM API for generating the stories."
+version = "1.0.0"
+license = {file = "LICENSE"}
+dependencies = ["requests", "re"]
+
+[project.urls]
+Repository = "https://github.com/blob8/ComfyUI_sloppy-comic"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = ""
+DisplayName = "ComfyUI_sloppy-comic"
+Icon = ""
