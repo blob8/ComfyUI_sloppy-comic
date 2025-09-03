@@ -1,17 +1,283 @@
+if __name__ != '__main__':
+    from nodes import common_ksampler, VAEDecode
+    import comfy
+    import subprocess
+    import sys
+    subprocess.check_call([sys.executable, "-m", "playwright", "install", "chromium"])
 import numpy as np
-import torch
-from PIL import Image, ImageDraw, ImageFont
 import requests
-import json
-from nodes import common_ksampler, VAEDecode
-import comfy
 from PIL import Image, ImageDraw, ImageFont
-
-import sys
-import os
-from uuid import uuid4
 import re
 import unicodedata
+from PIL import Image
+import io
+from playwright.sync_api import sync_playwright
+import random
+import base64
+from PIL import Image
+import cv2
+import numpy as np
+import torch
+
+def find_least_edge_quadrant(image) :
+    img = image.convert("L")
+    img = img.resize((512, 512))
+    img = np.array(img)
+
+    edge_x = cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize=3)
+    edge_y = cv2.Sobel(img, cv2.CV_64F, 0, 1, ksize=3)
+    edges = cv2.magnitude(edge_x, edge_y)
+    h, w = edges.shape
+    half_h, half_w = h // 2, w // 2
+    quadrants = {
+    'tl': edges[:half_h, :half_w],
+    'tr': edges[:half_h, half_w:],
+    'bl': edges[half_h:, :half_w],
+    'br': edges[half_h:, half_w:]
+    }
+
+    avg_edges = {q: np.mean(val) for q, val in quadrants.items()}
+
+    return min(avg_edges, key=avg_edges.get)
+
+
+class RowImage:
+    def __init__(self, image, w, h, x, y , is_first, is_last, diag_scale, caption_corner):
+        self.image = image
+        self.w = w
+        self.h = h
+        self.x = x
+        self.y = y
+        self.is_first = is_first
+        self.is_last = is_last
+        self.diag_scale = diag_scale
+        self.caption_corner = caption_corner
+        self.free_space_below = False #if true caption gets put below
+    
+    @property
+    def aspect(self):
+        return self.h / self.w
+    
+    def displace_rescale(self, displacement, factor):
+        self.x += displacement
+        new_w = factor*self.w
+        width_delta = new_w - self.w
+        self.w = new_w
+        self.h*=factor
+        return width_delta
+
+
+class Row:
+    def __init__(self, y, gutter, diag_scale):
+        self.images = []
+        self.gutter = gutter
+        self.max_height = 0
+        self.current_x = gutter
+        self.y = y
+        self.diag=diag_scale*random.randint(-1,1)
+
+    def add_image(self, image, target_w, caption_corner):
+        aspect = image.height / image.width
+        w = int((target_w * target_w / aspect) ** 0.5)
+        h = int(w * aspect)
+
+        if self.images:
+            self.images[-1].is_last = False
+        row_img = RowImage(image, w, h, self.current_x, self.y, is_first=len(self.images)==0, is_last=True, diag_scale=self.diag, caption_corner=caption_corner)
+        self.images.append(row_img)
+
+        self.current_x += w + self.gutter
+        return row_img
+
+    def finalize(self, canvas_width):
+
+        total_image_width = sum([img.w for img in self.images])
+        needed_width = (canvas_width-self.gutter*(1+len(self.images)))
+
+        if len(self.images) > 1: #if regular row
+            rescale = needed_width/total_image_width
+            prev=0
+        else: #if single image
+            if self.images[0].aspect > 1: #if tall or square
+                rescale = 1
+                prev = int(needed_width/2 - self.images[0].w/2)
+            else:
+                rescale = needed_width/total_image_width
+                prev=0
+
+        for image in self.images:
+            prev += image.displace_rescale(prev,rescale)
+        
+        for image in self.images:
+            if self.height > image.h:
+                image.free_space_below = self.height - image.h
+
+    @property
+    def height(self):
+        return max([img.h for img in self.images])
+
+
+def pil_image_to_data_uri(img, fmt, quality):
+    bio = io.BytesIO()
+    if fmt.upper() == "JPEG" and img.mode in ("RGBA", "LA"):
+        background = Image.new("RGB", img.size, (255, 255, 255))
+        background.paste(img, mask=img.split()[-1])
+        background.save(bio, format=fmt, quality=quality)
+    else:
+        img.save(bio, format=fmt, quality=quality)
+    encoded = base64.b64encode(bio.getvalue()).decode("ascii")
+    return f"data:image/{fmt.lower()};base64,{encoded}"
+
+
+def comic_collage_from_pil(images,texts,width=1500,style_opts=None):
+    print("Composing comic...")
+
+    if style_opts is None:
+        style_opts = {}
+    
+    bg_color = style_opts.get("bg_color", "#fff7ee")
+    diag_scale = style_opts.get("diag", 0.1)
+    base_panel_w = int(width / style_opts.get("squares_per_row"))
+    default_caption_corner = style_opts.get("caption_corner", 'auto')
+    gutter = int(base_panel_w/40)
+    rows = []
+    current_row = Row(y=gutter *3, gutter=gutter,diag_scale=diag_scale)
+    height = 0
+    for idx, img in enumerate(images):
+        caption_corner = find_least_edge_quadrant(img) if default_caption_corner == 'auto' else default_caption_corner
+        aspect = img.height / img.width
+        w = int((base_panel_w * base_panel_w / aspect) ** 0.5)
+        h = int(w * aspect)
+
+        if current_row.current_x + w + gutter > width and current_row.images:
+            current_row.finalize(width)
+            rows.append(current_row)
+
+            new_y = current_row.y + current_row.height + gutter *2
+            height = new_y
+            current_row = Row(y=new_y, gutter=gutter, diag_scale=diag_scale)
+
+        current_row.add_image(img, base_panel_w, caption_corner)
+
+    if current_row.images:
+        current_row.finalize(width)
+        rows.append(current_row)
+        height += current_row.height *1.07
+
+    positioned_images = [img for row in rows for img in row.images]
+
+    data_uris = []
+    for img in images:
+        img_copy = img.copy()
+        max_dim = base_panel_w * 2
+        img_copy.thumbnail((max_dim, max_dim), Image.LANCZOS)
+        data_uris.append(pil_image_to_data_uri(img_copy, fmt="PNG", quality=100))
+
+    panels_html = []
+
+    for idx, (row_img, uri) in enumerate(zip(positioned_images, data_uris)):
+        diag_scale = row_img.diag_scale
+        w, h, x, y = row_img.w, row_img.h, row_img.x, row_img.y
+
+        points = f" 0 0, \
+                    {w} 0, \
+                    {w-h*(diag_scale if diag_scale and not row_img.is_last else 0)} {h}, \
+                    {-h*(diag_scale if diag_scale and not row_img.is_first else 0)} {h}"
+
+        corner = row_img.caption_corner
+        caption_disp = int(base_panel_w/100)
+
+        if row_img.free_space_below:
+            caption_style = f"left:{caption_disp}px; bottom:-{int(row_img.free_space_below/2)}px;"
+        elif corner == "tl":
+            caption_style = f"left:{caption_disp}px; top:{caption_disp}px;"
+        elif corner == "tr":
+            caption_style = f"right:{caption_disp}px; top:{caption_disp}px;"
+        elif corner == "br":
+            caption_style = f"right:{caption_disp}px; bottom:{caption_disp}px;"
+        else:
+            caption_style = f"left:{caption_disp}px; bottom:{caption_disp}px;"
+
+        caption_html = f'<div class="caption" style="{caption_style}">{texts[idx]}</div>'
+        adjusted_width = w+abs(h*diag_scale)
+        adjusted_height = adjusted_width*(h/w)
+        y_disp = abs(adjusted_height-h) * (-1 if 'b' in corner else 0)
+        panels_html.append(f"""
+        <div class="panel" style="left:{x}px; top:{y}px; width:{w}px; height:{h}px;">
+            <svg xmlns="http://www.w3.org/2000/svg"
+                 width="{w}" height="{h}"
+                 viewBox="0 0 {w} {h}"
+                 preserveAspectRatio="none"
+                 style="display:block; overflow:visible;">
+                <defs>
+                    <clipPath id="clip-{idx}" clipPat
+                    hUnits="userSpaceOnUse">
+                        <polygon points="{points}" />
+                    </clipPath>
+                </defs>
+                <image href="{uri}"
+                       x="{min(-h*diag_scale,0)}" y="{y_disp}" width="{adjusted_width}" height="{adjusted_height}"
+                       preserveAspectRatio="xMidYMid meet"
+                       clip-path="url(#clip-{idx})" />
+                <polygon points="{points}"
+                         fill="none"
+                         stroke="#111"
+                         stroke-width="{int(base_panel_w/100)}"
+                         stroke-linejoin="round"
+                         vector-effect="non-scaling-stroke"
+                         style="filter: drop-shadow(0px 10px 30px rgba(0,0,0,0.25));" />
+            </svg>
+            {caption_html}
+        </div>
+        """)
+
+
+    html = f"""
+    <!doctype html>
+    <html>
+    <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+    html,body{{margin:0;padding:0;background:{bg_color};}}
+    .page {{
+        width: {width}px;
+        min-height: {height}px;
+        position: relative;
+        box-sizing: border-box;
+        font-family: "Comic Sans MS","Marker Felt","Segoe UI",sans-serif;
+        overflow: visible;
+        background-image: radial-gradient(circle at 10% 10%, rgba(0,0,0,0.06) 0px, rgba(0,0,0,0.06) 1px, transparent 1px), linear-gradient(45deg, rgba(0,0,0,0.02) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.02) 75%, rgba(0,0,0,0.02)), linear-gradient(-45deg, rgba(255,255,255,0.04) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.04) 75%, rgba(255,255,255,0.04)); background-size: 40px 40px, 8px 8px, 8px 8px;
+    }}
+    .panel {{ position:absolute; overflow:visible; }}
+    .caption {{ position:absolute; padding:{int(base_panel_w/100)}px {int(base_panel_w/80)}px; font-weight:700; font-size:{int(0.04*base_panel_w)}px; background:#fff; border-radius:{int(base_panel_w/50)}px; border:{int(base_panel_w/100)}px solid #111; transform:translateZ(0); box-shadow:{int(base_panel_w/80)}px {int(base_panel_w/100)}px 0 rgba(0,0,0,0.12); z-index:3; }}
+    .panel svg {{ display:block; }}
+    </style>
+    </head>
+    <body>
+    <div class="page">
+        {''.join(panels_html)}
+    </div>
+    </body>
+    </html>
+    """
+    
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+
+
+        page.set_content(html)
+        screenshot = page.screenshot(full_page=True)
+        browser.close()
+
+        img = Image.open(io.BytesIO(screenshot))
+    
+    img_np = np.array(img)
+    img_tensor = torch.from_numpy(img_np).unsqueeze(0).float() / 255.0
+    return img_tensor
+
+
 
 def clean_text(text):
     normalized_text = unicodedata.normalize('NFKD', text)
@@ -20,115 +286,6 @@ def clean_text(text):
     
     return cleaned_text
 
-
-def create_comic_base(total_width, total_height):
-    return Image.new('RGB', (total_width, total_height), color='black')
-
-def get_text_height(text, font, max_width):
-    draw = ImageDraw.Draw(Image.new('RGB', (max_width, 1)))
-    lines = []
-    words = text.split()
-    current_line = ""
-    
-    for word in words:
-        test_line = current_line + word + " "
-        line_width = draw.textbbox((0, 0), test_line, font=font)[2]  # Use textbbox to get width
-        if line_width <= max_width:
-            current_line = test_line
-        else:
-            lines.append(current_line)
-            current_line = word + " "
-    lines.append(current_line)
-    
-    # Calculate total height required
-    line_height = draw.textbbox((0, 0), "A", font=font)[3]  # Get height of a single line
-    return len(lines) * (line_height+5), lines
-
-def add_to_comic(comic_page, new_image, text, index, panel_width=1024, panel_height=1024, extra_displacement=0, columns=2):
-    """
-    This is a piece of shit no good function
-    """
-    draw = ImageDraw.Draw(comic_page)
-    
-    font_size = 30 
-    font = ImageFont.truetype("arial.ttf", font_size)
-
-    col = index % columns
-    row = index // columns
-    
-    x = col * panel_width
-    y = row * panel_height + extra_displacement
-
-    text_height, text_lines = get_text_height(text, font, panel_width-35)
-    
-    image_size = (int(panel_width * 0.97), int(panel_height * 0.97))
-    new_image_resized = new_image.resize(image_size, Image.LANCZOS)
-    
-    new_image_resized_x = x + (panel_width - image_size[0]) // 2
-    new_image_resized_y = y + (panel_height - image_size[1]) // 2
-
-    comic_page.paste(new_image_resized, (new_image_resized_x, new_image_resized_y))
-    
-    text_y = y + panel_height + 10 
-    text_x = x + 15
-
-    text_box_width = panel_width - 33
-    text_box_height = text_height + 15 
-    
-    rectangle_y = text_y - 5 
-    draw.rectangle([(text_x, rectangle_y), (text_x + text_box_width, rectangle_y + text_box_height)], fill="white")
-    
-    for line in text_lines:
-        draw.text((text_x+10, text_y), line, font=font, fill="black")
-        text_y += draw.textbbox((0, 0), line, font=font)[3] 
-
-    return text_height + 35
-
-
-
-
-
-def tensor_to_np(img_tensor, batch_index=0):
-    img_tensor = img_tensor[batch_index].unsqueeze(0)
-    i = 255. * img_tensor.cpu().numpy()
-    img = np.clip(i, 0, 255).astype(np.uint8).squeeze()
-    return img
-
-def llm_api_request(prompt, system, max_tokens, temp, top_p, min_p, url='http://localhost:5000/v1/chat/completions', api_key='none', model='none', instruction_template='ChatML'):
-
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {api_key}"
-    }
-
-    messages=[]
-    if system.strip() != '':
-        messages.append({
-            "role": "system",
-            "content": system
-        })
-    if prompt.strip() != '':
-        messages.append({
-            "role": "user",
-            "content": prompt
-        })
-
-    data = {
-        "messages": messages,
-        "mode": "instruct",
-        "model": model,
-        "instruction_template": instruction_template,
-        "max_tokens": max_tokens,
-        "temperature": temp,
-        "top_p": top_p,
-        "min_p": min_p
-    }
-
-    response = requests.post(url, headers=headers, json=data, verify=False)
-
-    text = response.json()['choices'][0]['message']['content'].strip()
-    
-    return text
 
 class LLM_API_Request:     
 
@@ -141,14 +298,14 @@ class LLM_API_Request:
         return {"required": {
                     "system_prompt": ("STRING",{"multiline": True}),
                     "prompt": ("STRING",{"multiline": True}),
-                    "url": ("STRING",{"default": "http://127.0.0.1:5000/v1/chat/completions"}),
-                    "api_key": ("STRING",{"default": "none"}),
-                    "model": ("STRING",{"default": "none"}),
-                    "instruction_template": ("STRING",{"default": "ChatML"}),
-                    "max_tokens": ("INT",{"default": 500, "min": 0, "max": 999999}),
-                    "temperature": ("FLOAT",{"default": 1,  'step':0.01, "min": -5, "max": 5}),
-                    "top_p": ("FLOAT",{"default": 0.7,  'step':0.01, "min": 0, "max": 1}),
-                    "min_p": ("FLOAT",{"default": 0.1, 'step':0.01,  "min": 0, "max": 1}),
+                    "start_with": ("STRING",{"multiline": True}),
+                    "url": ("STRING",{"default": "http://127.0.0.1:8080/v1/chat/completions"}),
+                    "api_key": ("STRING",{"default": ""}),
+                    "model": ("STRING",{"default": ""}),
+                    "max_tokens": ("INT",{"default": 1500, "min": 0, "max": 999999}),
+                    "temperature": ("FLOAT",{"default": 0.7, 'step':0.01, "min": 0, "max": 5}),
+                    "top_p": ("FLOAT",{"default": 0.95, 'step':0.01, "min": 0, "max": 1}),
+                    "min_p": ("FLOAT",{"default": 0.01, 'step':0.01,  "min": 0, "max": 1}),
                     "repetition_penalty": ("FLOAT",{"default": 1, 'step':0.01,  "min": 0, "max": 5}),
                     "seed": ("INT", {"default": 0, 'step':0.01, "min": 0, "max": 0xffffffffffffffff}),
         }}
@@ -159,7 +316,7 @@ class LLM_API_Request:
     FUNCTION = "llm_api_request"
     CATEGORY = "LLM API"
     
-    def llm_api_request(self, system_prompt, prompt, url, api_key, model, instruction_template, max_tokens, temperature, top_p, min_p, repetition_penalty, seed):
+    def llm_api_request(self, system_prompt, prompt, start_with, url, api_key, model, max_tokens, temperature, top_p, min_p, repetition_penalty, seed):
 
         headers = {
             "Content-Type": "application/json",
@@ -172,17 +329,19 @@ class LLM_API_Request:
                 "role": "system",
                 "content": system_prompt
             })
-        if prompt.strip() != '':
+        messages.append({
+            "role": "user",
+            "content": prompt
+        })
+        if start_with.strip() != '':
             messages.append({
-                "role": "user",
-                "content": prompt
-            })
-
+                    "role": "assistant",
+                    "content": start_with
+                })
+            
         data = {
             "messages": messages,
-            "mode": "instruct",
             "model": model,
-            "instruction_template": instruction_template,
             "max_tokens": max_tokens,
             "min_p": min_p,
             "temperature": temperature,
@@ -192,18 +351,26 @@ class LLM_API_Request:
 
         response = requests.post(url, headers=headers, json=data, verify=False)
 
-        text = response.json()['choices'][0]['message']['content'].strip()
+        text = start_with + response.json()['choices'][0]['message']['content'].strip()
         
         return (text,)
 
 
 
-
 class GenerateComic:     
 
+    sdxl_ratio_to_res = {
+        "horizontal_wide":[1408,640],
+        "horizontal":[1216,832],
+        "square":[1024,1024],
+        "vertical":[832,1216],
+        "vertical_tall":[640,1408]
+
+    }
     def __init__(self):
         self.vae_decoder=VAEDecode()
-
+        self.device = comfy.model_management.intermediate_device()
+        
     @classmethod
     def INPUT_TYPES(cls):
                
@@ -211,20 +378,23 @@ class GenerateComic:
                     "story": ("STRING", {"multiline": True}),
                     "add_to_positive": ("STRING", {"multiline": True}),
                     "add_to_negative": ("STRING", {"multiline": True}),
+                    "width": ("INT", {"default": 1800, "min": 0, "max": 99999, 'step':100}),
+                    "squares_per_row": ("FLOAT", {"default": 2.6, "min": 1.5, "max": 99999, 'step':0.1}),
+                    "bg_color": ("STRING", {"default": "#fff7ee"}),
+                    "caption_positioning": ("STRING", {"default": "auto"}),
+                    "shear": ("FLOAT", {"default": 0, "min": 0.0, "max": 0.3, 'step':0.05}),
                     "model": ("MODEL",),
                     "clip": ("CLIP",),
                     "vae": ("VAE",),
                     "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-                    "steps": ("INT", {"default": 20, "min": 1, "max": 10000, "step": 1}),
-                    "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
+                    "steps": ("INT", {"default": 15, "min": 1, "max": 10000, "step": 1}),
+                    "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0, "step":0.01}),
                     "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
-                    "latent_image": ("LATENT",),
-                    "num_columns": ("INT", {"default": 2, "min": 0, "max": 10}),
         }}
         
 
-    RETURN_TYPES = ()
+    RETURN_TYPES = ('IMAGE',)
     FUNCTION = "generate_comic"
     CATEGORY = "Comic generation"
     OUTPUT_NODE = True
@@ -243,45 +413,31 @@ class GenerateComic:
         (decoded,) = self.vae_decoder.decode(vae, sampled)
         return decoded
     
-    def generate_visual(self, panel_prompts, add_to_positive, add_to_negative, panel_texts, clip, model, vae, seed, steps, cfg, sampler_name, scheduler, latent_image, columns):
-        num_panels = len(panel_prompts)
-        panel_width, panel_height = 1024, 1024
-
+    def generate_visual(self, panel_prompts, comic_width, style_opts, add_to_positive, add_to_negative, panel_texts, clip, model, vae, seed, steps, cfg, sampler_name, scheduler):
         
-        comic_height = int(panel_height*((num_panels+1)/columns))*2
-        comic_width = columns * panel_width
-        
-        comic = create_comic_base(comic_width, comic_height)
-        prev_row=0
-        column_text_heights = {str(i): [0] for i in range(-1, 999)}
+        generated_imgs = []
         for idx, (prompt, text) in enumerate(zip(panel_prompts, panel_texts)):
-            row = idx // columns
-            prev_row=row
+            
+            aspect = prompt.split(',')[0].strip()
+            if aspect in self.sdxl_ratio_to_res.keys():
+                width, height = self.sdxl_ratio_to_res[aspect]
+                prompt = prompt[prompt.find(',')+1:]
+            else:
+                print(f'No aspect ratio spectified as first tag of the image, must be one of {list(self.sdxl_ratio_to_res.keys())}, defaulting to square.')
+                width, height = self.sdxl_ratio_to_res['square']
 
+            latent_image = {"samples":torch.zeros([1, 4, height // 8, width // 8], device=self.device)}
+            print(f'Generating panel {idx+1} of {len(panel_prompts)}')
             new_image = self.get_image(clip, prompt,  add_to_positive, add_to_negative, model, vae, seed, steps, cfg, sampler_name, scheduler, latent_image)
+            numpy_array = (new_image.squeeze(0) * 255).cpu().numpy()
+            generated_imgs.append(Image.fromarray(numpy_array.astype(np.uint8)))
             seed+=1
-            new_image = tensor_to_np(new_image)
 
-            new_image_pil = Image.fromarray(new_image.astype('uint8'))
-            text_height = add_to_comic(comic, new_image_pil, text, idx, columns=columns, extra_displacement=max(column_text_heights[str(row-1)]))
-
-    
-
-            column_text_heights[str(row)].append(text_height+max(column_text_heights[str(row-1)]))
-
-        comic_pixels = np.array(comic)
-
-        for y in range(comic_height - 1, -1, -1):
-            crop_height = y
-            if (comic_pixels[y, :, :] != 0).any(): 
-                break
-
-        comic = comic.crop((0, 0, comic_width, crop_height))
-
-
+        
+        comic = comic_collage_from_pil(images=generated_imgs, texts=panel_texts, width=comic_width, style_opts=style_opts)
         return comic
 
-    def generate_comic(self, story, add_to_positive, add_to_negative, model, clip, vae, seed, steps, cfg, sampler_name, scheduler, latent_image, num_columns):
+    def generate_comic(self, story, add_to_positive, add_to_negative, width, squares_per_row, bg_color, caption_positioning, shear, model, clip, vae, seed, steps, cfg, sampler_name, scheduler):
         story = clean_text(story)
         panel_prompts = re.findall(r'\{([^{}]*)\}', story)
         print("\nPanel prompts: ", panel_prompts)
@@ -298,14 +454,8 @@ class GenerateComic:
         
         print("\nPanel texts: ", panel_texts)
 
-        comic = self.generate_visual(panel_prompts, add_to_positive, add_to_negative, panel_texts, clip, model, vae, seed, steps, cfg, sampler_name, scheduler, latent_image, columns=num_columns)
-        
-        main_script_path = os.path.abspath(sys.argv[0])
-        main_dir = os.path.dirname(main_script_path)
-        output_dir = os.path.join(main_dir, "output")
-        path = os.path.join(output_dir, f"{uuid4()}.jpeg")
-
-        print("PATH ",path)
-
-        comic.save(path)
-        return ()
+        style_opts = {'bg_color':bg_color, 'diag': shear, 'caption_corner': caption_positioning, 'squares_per_row': squares_per_row}
+        comic = self.generate_visual(panel_prompts, width, style_opts, add_to_positive, add_to_negative, panel_texts, clip, model, vae, seed, steps, cfg, sampler_name, scheduler)
+    
+        return (comic,)
+    
