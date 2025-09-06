@@ -1,4 +1,4 @@
 requests
 playwright
-cv2
+opencv-python
 re
