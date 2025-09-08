@@ -11,7 +11,8 @@ import re
 import unicodedata
 from PIL import Image
 import io
-from playwright.sync_api import sync_playwright
+import asyncio
+from playwright.async_api import async_playwright
 import random
 import base64
 from PIL import Image
@@ -261,17 +262,18 @@ def comic_collage_from_pil(images,texts,width=1500,style_opts=None):
     </body>
     </html>
     """
-    
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        page = browser.new_page()
 
+    async def capture_screenshot(html):
+        async with async_playwright() as p:
+            browser = await p.chromium.launch()
+            page = await browser.new_page()
+            await page.set_content(html)
+            screenshot = await page.screenshot(full_page=True)
+            await browser.close()
+            return screenshot
+    screenshot = asyncio.run(capture_screenshot(html))
 
-        page.set_content(html)
-        screenshot = page.screenshot(full_page=True)
-        browser.close()
-
-        img = Image.open(io.BytesIO(screenshot))
+    img = Image.open(io.BytesIO(screenshot))
     
     img_np = np.array(img)
     img_tensor = torch.from_numpy(img_np).unsqueeze(0).float() / 255.0
