@@ -1,23 +1,20 @@
-if __name__ != '__main__':
-    from nodes import common_ksampler, VAEDecode
-    import comfy
-    import subprocess
-    import sys
-    subprocess.check_call([sys.executable, "-m", "playwright", "install", "chromium"])
+from nodes import common_ksampler, VAEDecode
+import comfy
+import subprocess
+import sys
+import threading
+subprocess.check_call([sys.executable, "-m", "playwright", "install", "chromium"])
 import numpy as np
 import requests
 from PIL import Image, ImageDraw, ImageFont
 import re
 import unicodedata
-from PIL import Image
 import io
 import asyncio
 from playwright.async_api import async_playwright
 import random
 import base64
-from PIL import Image
 import cv2
-import numpy as np
 import torch
 
 def find_least_edge_quadrant(image) :
@@ -263,15 +260,27 @@ def comic_collage_from_pil(images,texts,width=1500,style_opts=None):
     </html>
     """
 
-    async def capture_screenshot(html):
-        async with async_playwright() as p:
-            browser = await p.chromium.launch()
-            page = await browser.new_page()
-            await page.set_content(html)
-            screenshot = await page.screenshot(full_page=True)
-            await browser.close()
-            return screenshot
-    screenshot = asyncio.run(capture_screenshot(html))
+    def capture_screenshot_sync(html):
+        result_container = {}
+        def run():
+            async def capture_screenshot(html):
+                async with async_playwright() as p:
+                    browser = await p.chromium.launch()
+                    page = await browser.new_page()
+                    await page.set_content(html)
+                    screenshot = await page.screenshot(full_page=True)
+                    await browser.close()
+                    return screenshot
+
+            result_container["screenshot"]= asyncio.run(capture_screenshot(html))
+
+        thread = threading.Thread(target=run)
+        thread.start()
+        thread.join()
+        return result_container["screenshot"]
+
+    screenshot = capture_screenshot_sync(html)
+
 
     img = Image.open(io.BytesIO(screenshot))
     
